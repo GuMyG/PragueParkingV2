@@ -1,4 +1,4 @@
-﻿namespace PragueParking.Tests
+﻿namespace Prague_Parking.Tests
 {
     [TestClass]
     public sealed class Test1
