@@ -1,7 +1,7 @@
 ﻿using Prague_Parking;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Prague_Parking;
+namespace PragueParking;
 
 public class ParkingGarage
 {

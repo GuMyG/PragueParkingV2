@@ -1,6 +1,6 @@
 ﻿using Prague_Parking;
 
-namespace Prague_Parking;
+namespace PragueParking;
 
 public class MC : Vehicle
 {
