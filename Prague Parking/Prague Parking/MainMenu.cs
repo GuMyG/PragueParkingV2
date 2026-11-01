@@ -24,8 +24,9 @@ public class MainMenu
     {
         dataStore = new ParkingDataStore();
 
+        GarageConfig config = dataStore.LoadConfig();
         priceList = new PriceList();
-        garage = new ParkingGarage(GarageConfig.CreateDefault());
+        garage = new ParkingGarage(config);
         dataFileOk = dataStore.LoadVehicles(garage);
     }
 

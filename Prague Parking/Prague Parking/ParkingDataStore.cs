@@ -3,10 +3,48 @@ using PragueParking.DataAccess;
 
 namespace PragueParking;
 
+/// <summary>
+/// Läser och sparar programmets filer med hjälp av MyFiles: konfigurationen och de parkerade fordonen.
+/// Saknas en fil, eller går den inte att läsa, används standardvärden.
+/// </summary>
 public class ParkingDataStore
 {
+    private const string ConfigFileName = "config.json";
     private const string DataFileName = "parkingdata.json";
 
+    /// <summary>
+    /// Läser config.json. Saknas filen eller är den felaktig returneras standardinställningarna.
+    /// </summary>
+    public GarageConfig LoadConfig()
+    {
+        string path = GetPath(ConfigFileName);
+
+        if (!MyFiles.FileExists(path))
+        {
+            return GarageConfig.CreateDefault();
+        }
+
+        try
+        {
+            GarageConfig? config = MyFiles.ReadJson<GarageConfig>(path);
+
+            if (config != null && config.IsValid())
+            {
+                return config;
+            }
+        }
+        catch (Exception)
+        {
+            // Filen är inte giltig JSON. Då används standardinställningarna nedan.
+        }
+
+        return GarageConfig.CreateDefault();
+    }
+
+    /// <summary>
+    /// Läser parkingdata.json och ställer in fordonen i P-huset.
+    /// Returnerar false om filen finns men inte går att läsa. Då startar P-huset tomt.
+    /// </summary>
     public bool LoadVehicles(ParkingGarage garage)
     {
         string path = GetPath(DataFileName);
@@ -35,11 +73,11 @@ public class ParkingDataStore
 
         foreach (ParkingRecord record in records)
         {
-            // Filen kan ha ändrats för hand, så regnr görs om till versaler utan mellansag.
+            // Filen kan ha ändrats för hand, så regnr görs om till versaler utan mellanslag.
             string regNumber = RegNumberHelper.Normalize(record.RegNumber);
             Vehicle vehicle = garage.CreateVehicle(record.Type, regNumber, record.ArrivalTime);
 
-            // Finns platsen inte längre, till exempel om antalet platser har minskas,
+            // Finns platsen inte längre, till exempel om antalet platser har minskats,
             // ställs fordonet på en ledig plats i stället.
             if (!garage.ParkVehicleAt(vehicle, record.SpotNumber))
             {
@@ -50,6 +88,9 @@ public class ParkingDataStore
         return true;
     }
 
+    /// <summary>
+    /// Sparar alla parkerade fordon i parkingdata.json. Returnerar false om det inte gick.
+    /// </summary>
     public bool SaveGarage(ParkingGarage garage)
     {
         List<ParkingRecord> records = new List<ParkingRecord>();
