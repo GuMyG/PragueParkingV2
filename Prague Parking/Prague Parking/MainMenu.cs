@@ -3,12 +3,13 @@ using Spectre.Console;
 
 namespace PragueParking;
 
-
 public class MainMenu
 {
     private const string ParkChoice = "Parkera fordon";
     private const string CheckOutChoice = "Hämta ut fordon";
+    private const string MoveChoice = "Flytta fordon";
     private const string SearchChoice = "Sök fordon";
+    private const string MapChoice = "Visa karta";
     private const string ExitChoice = "Avsluta";
     private const string CancelChoice = "Avbryt";
     private const string CarChoice = "Bil";
@@ -17,14 +18,12 @@ public class MainMenu
     private ParkingGarage garage;
     private PriceList priceList;
 
-  
     public MainMenu()
     {
         priceList = new PriceList();
         garage = new ParkingGarage(GarageConfig.CreateDefault());
     }
 
-  
     public void Run()
     {
         bool running = true;
@@ -42,8 +41,14 @@ public class MainMenu
                 case CheckOutChoice:
                     CheckOutVehicle();
                     break;
+                case MoveChoice:
+                    MoveVehicle();
+                    break;
                 case SearchChoice:
                     SearchVehicle();
+                    break;
+                case MapChoice:
+                    ShowMap();
                     break;
                 case ExitChoice:
                     running = false;
@@ -63,7 +68,7 @@ public class MainMenu
     {
         AnsiConsole.Clear();
         AnsiConsole.Write(new Rule("[cyan]PRAGUE PARKING[/]"));
-        AnsiConsole.MarkupLine($"Lediga platser: {garage.CountFreeSpots()} av {garage.Spots.Count}");
+        GarageMap.ShowFreeSpots(garage);
         AnsiConsole.WriteLine();
     }
 
@@ -71,7 +76,8 @@ public class MainMenu
     {
         SelectionPrompt<string> prompt = new SelectionPrompt<string>();
         prompt.Title = "Vad vill du göra?";
-        prompt.AddChoices(ParkChoice, CheckOutChoice, SearchChoice, ExitChoice);
+        prompt.AddChoices(ParkChoice, CheckOutChoice, MoveChoice, SearchChoice,
+            MapChoice, ExitChoice);
 
         return AnsiConsole.Prompt(prompt);
     }
@@ -144,6 +150,50 @@ public class MainMenu
         ShowSuccess($"{vehicle} har hämtats ut från plats {spot.Number}.");
     }
 
+    private void MoveVehicle()
+    {
+        ShowTitle("Flytta fordon");
+
+        string regNumber = AskRegNumber("Regnr på fordonet som ska flyttas (tomt = avbryt):");
+
+        if (regNumber == "")
+        {
+            ShowInfo("Avbrutet. Inget fordon flyttades.");
+            return;
+        }
+
+        if (!garage.FindVehicle(regNumber, out Vehicle? vehicle, out ParkingSpot? fromSpot))
+        {
+            ShowError($"Hittade inget fordon med regnr {regNumber}.");
+            return;
+        }
+
+        ShowInfo($"{vehicle} står på plats {fromSpot.Number}.");
+
+        int fromNumber = fromSpot.Number;
+        int toNumber = AskSpotNumber($"Flytta till plats (1-{garage.Spots.Count}, 0 = avbryt):");
+
+        if (toNumber == 0)
+        {
+            ShowInfo("Avbrutet. Inget fordon flyttades.");
+            return;
+        }
+
+        if (toNumber == fromNumber)
+        {
+            ShowError($"{vehicle} står redan på plats {toNumber}.");
+            return;
+        }
+
+        if (!garage.MoveVehicle(regNumber, toNumber))
+        {
+            ShowError($"{vehicle} får inte plats på plats {toNumber}. Där står: {garage.GetSpot(toNumber)}.");
+            return;
+        }
+
+        ShowSuccess($"Kör {vehicle} från plats {fromNumber} till plats {toNumber}.");
+    }
+
     private void SearchVehicle()
     {
         ShowTitle("Sök fordon");
@@ -164,6 +214,12 @@ public class MainMenu
 
         ShowSuccess($"{vehicle} står på plats {spot.Number}.");
         ShowVehicleInfo(vehicle, spot);
+    }
+
+    private void ShowMap()
+    {
+        ShowTitle("Karta över P-huset");
+        GarageMap.ShowMap(garage);
     }
 
     // Visar plats, ankomsttid, parkerad tid och pris för ett fordon.
@@ -232,6 +288,22 @@ public class MainMenu
 
             ShowError($"Ogiltigt regnr. Det får vara 1–{RegNumberHelper.MaxLength} tecken " +
                 "och bara innehålla bokstäver och siffror.");
+        }
+    }
+
+    // Frågar efter ett platsnummer mellan 0 och antal platser. 0 betyder avbryt.
+    private int AskSpotNumber(string question)
+    {
+        while (true)
+        {
+            string input = AnsiConsole.Prompt(new TextPrompt<string>(question).AllowEmpty());
+
+            if (int.TryParse(input, out int number) && number >= 0 && number <= garage.Spots.Count)
+            {
+                return number;
+            }
+
+            ShowError($"Skriv ett heltal mellan 0 och {garage.Spots.Count}.");
         }
     }
 
