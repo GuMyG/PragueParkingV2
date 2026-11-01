@@ -15,17 +15,29 @@ public class MainMenu
     private const string CarChoice = "Bil";
     private const string McChoice = "MC";
 
+    private ParkingDataStore dataStore;
     private ParkingGarage garage;
     private PriceList priceList;
+    private bool dataFileOk;
 
     public MainMenu()
     {
+        dataStore = new ParkingDataStore();
+
         priceList = new PriceList();
         garage = new ParkingGarage(GarageConfig.CreateDefault());
+        dataFileOk = dataStore.LoadVehicles(garage);
     }
 
     public void Run()
     {
+        // Går datafilen inte att läsa startar P-huset tomt, och personalen får veta det.
+        if (!dataFileOk)
+        {
+            ShowError("Filen parkingdata.json kunde inte läsas. P-huset startar tomt.");
+            WaitForKey();
+        }
+
         bool running = true;
 
         while (running)
@@ -115,6 +127,8 @@ public class MainMenu
             return;
         }
 
+        SaveGarage();
+
         AnsiConsole.Write(new Panel($"[bold green]Kör till plats {spot.Number}[/]"));
         ShowSuccess($"{vehicle} parkerades {vehicle.ArrivalTime:yyyy-MM-dd HH:mm}.");
     }
@@ -146,6 +160,7 @@ public class MainMenu
         }
 
         garage.CheckOutVehicle(regNumber);
+        SaveGarage();
 
         ShowSuccess($"{vehicle} har hämtats ut från plats {spot.Number}.");
     }
@@ -190,6 +205,8 @@ public class MainMenu
             ShowError($"{vehicle} får inte plats på plats {toNumber}. Där står: {garage.GetSpot(toNumber)}.");
             return;
         }
+
+        SaveGarage();
 
         ShowSuccess($"Kör {vehicle} från plats {fromNumber} till plats {toNumber}.");
     }
@@ -315,6 +332,14 @@ public class MainMenu
         prompt.InvalidChoiceMessage = "[red]Svara j eller n.[/]";
 
         return AnsiConsole.Prompt(prompt);
+    }
+
+    private void SaveGarage()
+    {
+        if (!dataStore.SaveGarage(garage))
+        {
+            ShowError("Kunde inte spara till parkingdata.json. Ändringen finns bara kvar tills programmet stängs.");
+        }
     }
 
     private static void ShowTitle(string title)
