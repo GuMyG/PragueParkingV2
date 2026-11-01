@@ -1,7 +1,7 @@
 ﻿using Prague_Parking;
 using Spectre.Console;
 
-namespace Prague_Parking;
+namespace PragueParking;
 
 
 public class MainMenu
