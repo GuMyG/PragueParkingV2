@@ -3,18 +3,24 @@ using PragueParking.DataAccess;
 
 namespace PragueParking;
 
-/// <summary>
-/// Läser och sparar programmets filer med hjälp av MyFiles: konfigurationen och de parkerade fordonen.
-/// Saknas en fil, eller går den inte att läsa, används standardvärden.
-/// </summary>
 public class ParkingDataStore
 {
     private const string ConfigFileName = "config.json";
+    private const string PriceListFileName = "pricelist.txt";
     private const string DataFileName = "parkingdata.json";
 
-    /// <summary>
-    /// Läser config.json. Saknas filen eller är den felaktig returneras standardinställningarna.
-    /// </summary>
+    public List<string> InvalidPriceLines { get; private set; }
+
+    public ParkingDataStore()
+    {
+        InvalidPriceLines = new List<string>();
+    }
+
+    public string PriceListPath
+    {
+        get { return GetPath(PriceListFileName); }
+    }
+
     public GarageConfig LoadConfig()
     {
         string path = GetPath(ConfigFileName);
@@ -41,10 +47,23 @@ public class ParkingDataStore
         return GarageConfig.CreateDefault();
     }
 
-    /// <summary>
-    /// Läser parkingdata.json och ställer in fordonen i P-huset.
-    /// Returnerar false om filen finns men inte går att läsa. Då startar P-huset tomt.
-    /// </summary>
+    public PriceList LoadPriceList()
+    {
+        string path = GetPath(PriceListFileName);
+        PriceList priceList = new PriceList();
+        InvalidPriceLines = new List<string>();
+
+        if (!MyFiles.FileExists(path))
+        {
+            return priceList;
+        }
+
+        string[] lines = MyFiles.ReadLines(path);
+        InvalidPriceLines = priceList.LoadFromLines(lines);
+
+        return priceList;
+    }
+
     public bool LoadVehicles(ParkingGarage garage)
     {
         string path = GetPath(DataFileName);
@@ -88,9 +107,6 @@ public class ParkingDataStore
         return true;
     }
 
-    /// <summary>
-    /// Sparar alla parkerade fordon i parkingdata.json. Returnerar false om det inte gick.
-    /// </summary>
     public bool SaveGarage(ParkingGarage garage)
     {
         List<ParkingRecord> records = new List<ParkingRecord>();
